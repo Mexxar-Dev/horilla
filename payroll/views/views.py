@@ -477,6 +477,42 @@ def update_payslip_status(request, payslip_id):
     data["json_data"]["employee"] = payslip.employee_id.id
     data["json_data"]["payslip"] = payslip.id
     data["instance"] = payslip
+
+    # Extract employer contributions from saved deduction data
+    if "employer_contributions" not in data or not data["employer_contributions"]:
+        employer_contributions = []
+        all_deduction_lists = [
+            data.get("basic_pay_deductions", []),
+            data.get("gross_pay_deductions", []),
+            data.get("pretax_deductions", []),
+            data.get("post_tax_deductions", []),
+            data.get("tax_deductions", []),
+            data.get("net_deductions", []),
+        ]
+
+        for deduction_list in all_deduction_lists:
+            for deduction in deduction_list:
+                employer_amount = deduction.get("employer_contribution_amount", 0)
+                employer_rate = deduction.get("employer_contribution_rate", 0)
+                if employer_amount > 0:
+                    base_title = deduction.get("base_title", deduction.get("title"))
+                    title_with_rate = (
+                        f"{base_title} ({employer_rate}%)"
+                        if employer_rate
+                        else base_title
+                    )
+                    employer_contributions.append(
+                        {
+                            "title": title_with_rate,
+                            "employer_amount": employer_amount,
+                        }
+                    )
+
+        data["employer_contributions"] = employer_contributions
+        data["total_employer_contribution"] = sum(
+            item["employer_amount"] for item in employer_contributions
+        )
+
     return render(request, "payroll/payslip/individual_payslip_summery.html", data)
 
 
@@ -641,6 +677,42 @@ def view_created_payslip(request, payslip_id, **kwargs):
         data["json_data"]["employee"] = payslip.employee_id.id
         data["json_data"]["payslip"] = payslip.id
         data["instance"] = payslip
+
+        # Extract employer contributions from saved deduction data
+        if "employer_contributions" not in data or not data["employer_contributions"]:
+            employer_contributions = []
+            all_deduction_lists = [
+                data.get("basic_pay_deductions", []),
+                data.get("gross_pay_deductions", []),
+                data.get("pretax_deductions", []),
+                data.get("post_tax_deductions", []),
+                data.get("tax_deductions", []),
+                data.get("net_deductions", []),
+            ]
+
+            for deduction_list in all_deduction_lists:
+                for deduction in deduction_list:
+                    employer_amount = deduction.get("employer_contribution_amount", 0)
+                    employer_rate = deduction.get("employer_contribution_rate", 0)
+                    if employer_amount > 0:
+                        base_title = deduction.get("base_title", deduction.get("title"))
+                        title_with_rate = (
+                            f"{base_title} ({employer_rate}%)"
+                            if employer_rate
+                            else base_title
+                        )
+                        employer_contributions.append(
+                            {
+                                "title": title_with_rate,
+                                "employer_amount": employer_amount,
+                            }
+                        )
+
+            data["employer_contributions"] = employer_contributions
+            data["total_employer_contribution"] = sum(
+                item["employer_amount"] for item in employer_contributions
+            )
+
         return render(request, "payroll/payslip/individual_payslip.html", data)
     return render(request, "404.html")
 

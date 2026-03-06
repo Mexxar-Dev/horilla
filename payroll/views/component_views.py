@@ -219,6 +219,38 @@ def payroll_calculation(employee, start_date, end_date):
     for deduction in update_net_pay_deductions:
         net_pay_deduction_list.append(deduction)
     net_pay = net_pay - net_pay_deductions["net_deduction"]
+
+    # Extract employer contributions from all deduction types
+    employer_contributions = []
+    all_deduction_lists = [
+        basic_pay_deductions,
+        gross_pay_deductions,
+        pretax_deductions["pretax_deductions"],
+        post_tax_deductions["post_tax_deductions"],
+        tax_deductions["tax_deductions"],
+        net_pay_deduction_list,
+    ]
+
+    for deduction_list in all_deduction_lists:
+        for deduction in deduction_list:
+            employer_amount = deduction.get("employer_contribution_amount", 0)
+            employer_rate = deduction.get("employer_contribution_rate", 0)
+            if employer_amount > 0:
+                base_title = deduction.get("base_title", deduction.get("title"))
+                title_with_rate = (
+                    f"{base_title} ({employer_rate}%)" if employer_rate else base_title
+                )
+                employer_contributions.append(
+                    {
+                        "title": title_with_rate,
+                        "employer_amount": employer_amount,
+                    }
+                )
+
+    total_employer_contribution = sum(
+        item["employer_amount"] for item in employer_contributions
+    )
+
     payslip_data = {
         "employee": employee,
         "contract_wage": contract_wage,
@@ -238,6 +270,8 @@ def payroll_calculation(employee, start_date, end_date):
         "total_deductions": total_deductions,
         "loss_of_pay": loss_of_pay,
         "federal_tax": federal_tax,
+        "employer_contributions": employer_contributions,
+        "total_employer_contribution": total_employer_contribution,
         "start_date": start_date,
         "end_date": end_date,
         "range": f"{start_date.strftime('%b %d %Y')} - {end_date.strftime('%b %d %Y')}",
@@ -246,6 +280,8 @@ def payroll_calculation(employee, start_date, end_date):
     data_to_json["employee"] = employee.id
     data_to_json["start_date"] = start_date.strftime("%Y-%m-%d")
     data_to_json["end_date"] = end_date.strftime("%Y-%m-%d")
+    data_to_json["employer_contributions"] = employer_contributions
+    data_to_json["total_employer_contribution"] = total_employer_contribution
     json_data = json.dumps(data_to_json)
 
     payslip_data["json_data"] = json_data

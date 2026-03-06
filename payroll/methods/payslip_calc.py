@@ -476,9 +476,13 @@ def calculate_tax_deduction(*_args, **kwargs):
         amount = if_condition_on(**kwargs)
         deductions_amt.append(amount)
     for deduction, amount in zip(deductions, deductions_amt):
+        title = deduction.title
+        if not deduction.is_fixed and deduction.rate:
+            title = f"{deduction.title} ({deduction.rate}%)"
         serialized_deduction = {
             "deduction_id": deduction.id,
-            "title": deduction.title,
+            "title": title,
+            "base_title": deduction.title,
             "is_tax": deduction.is_tax,
             "amount": amount,
             "employer_contribution_rate": deduction.employer_rate,
@@ -581,9 +585,13 @@ def calculate_pre_tax_deduction(*_args, **kwargs):
             kwargs["component"] = deduction
             pre_tax_deductions_amt.append(if_condition_on(**kwargs))
     for deduction, amount in zip(pre_tax_deductions, pre_tax_deductions_amt):
+        title = deduction.title
+        if not deduction.is_fixed and deduction.rate:
+            title = f"{deduction.title} ({deduction.rate}%)"
         serialized_deduction = {
             "deduction_id": deduction.id,
-            "title": deduction.title,
+            "title": title,
+            "base_title": deduction.title,
             "is_pretax": deduction.is_pretax,
             "amount": amount,
             "employer_contribution_rate": deduction.employer_rate,
@@ -677,9 +685,13 @@ def calculate_post_tax_deduction(*_args, **kwargs):
                 post_tax_deductions_amt.append(amount)
 
     for deduction, amount in zip(post_tax_deductions, post_tax_deductions_amt):
+        title = deduction.title
+        if not deduction.is_fixed and deduction.rate:
+            title = f"{deduction.title} ({deduction.rate}%)"
         serialized_deduction = {
             "deduction_id": deduction.id,
-            "title": deduction.title,
+            "title": title,
+            "base_title": deduction.title,
             "is_pretax": deduction.is_pretax,
             "amount": amount,
             "employer_contribution_rate": deduction.employer_rate,
@@ -720,9 +732,13 @@ def calculate_net_pay_deduction(net_pay, net_pay_deductions, **kwargs):
         deduction_amt.append(amount)
     net_deduction = 0
     for deduction, amount in zip(deductions, deduction_amt):
+        title = deduction.title
+        if not deduction.is_fixed and deduction.rate:
+            title = f"{deduction.title} ({deduction.rate}%)"
         serialized_deduction = {
             "deduction_id": deduction.id,
-            "title": deduction.title,
+            "title": title,
+            "base_title": deduction.title,
             "is_pretax": deduction.is_pretax,
             "amount": amount,
             "employer_contribution_rate": deduction.employer_rate,

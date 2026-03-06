@@ -539,6 +539,8 @@ def calculate_employer_contribution(data):
     """
     pay_head_data = data["pay_data"]
     deductions_to_process = [
+        pay_head_data.get("basic_pay_deductions"),
+        pay_head_data.get("gross_pay_deductions"),
         pay_head_data.get("pretax_deductions"),
         pay_head_data.get("post_tax_deductions"),
         pay_head_data.get("tax_deductions"),
