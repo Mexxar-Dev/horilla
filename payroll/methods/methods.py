@@ -290,14 +290,9 @@ def daily_computation(employee, wage, start_date, end_date):
 def get_daily_salary(wage, wage_date) -> dict:
     """
     This method is used to calculate daily salary for the date
+    Using fixed 30-day month for consistency with company payroll policy
     """
-    last_day = calendar.monthrange(wage_date.year, wage_date.month)[1]
-    end_date = date(wage_date.year, wage_date.month, last_day)
-    start_date = date(wage_date.year, wage_date.month, 1)
-    working_days = get_working_days(start_date, end_date)["total_working_days"]
-    day_wage = (
-        wage / working_days if working_days else 0.0
-    )  # if working_days != 0 else 0 #769
+    day_wage = wage / 30
 
     return {
         "day_wage": day_wage,
@@ -428,8 +423,10 @@ def monthly_computation(employee, wage, start_date, end_date, *args, **kwargs):
 
     leave_data = get_leaves(employee, start_date, end_date)
 
-    for data in month_data:
-        basic_pay = basic_pay + (30 * data["per_day_amount"])
+    # Calculate basic pay for the 30-day period (not per month)
+    # Since per_day_amount = wage / 30, basic_pay = 30 * (wage / 30) = wage
+    per_day_amount = wage / 30
+    basic_pay = 30 * per_day_amount
 
     contract = employee.contract_set.filter(contract_status="active").first()
     loss_of_pay = 0
