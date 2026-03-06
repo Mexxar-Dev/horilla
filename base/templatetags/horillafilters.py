@@ -290,10 +290,16 @@ def currency_symbol_position(amount):
 
     currency = symbol.currency_symbol if symbol else "$"
 
+    # Format amount with thousand separators
+    try:
+        formatted_amount = "{:,.2f}".format(float(amount))
+    except (ValueError, TypeError):
+        formatted_amount = amount
+
     if symbol.position == "postfix":
-        currency_symbol = f"{amount} {currency}"
+        currency_symbol = f"{formatted_amount} {currency}"
     else:
-        currency_symbol = f"{currency} {amount}"
+        currency_symbol = f"{currency} {formatted_amount}"
 
     return currency_symbol
 
