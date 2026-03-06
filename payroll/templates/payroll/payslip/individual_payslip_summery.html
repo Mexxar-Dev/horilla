@@ -48,8 +48,8 @@
             <span class="oh-payslip__netpay-title">{% trans "Paid Days" %}
                 <small style="margin-left:86px;font-weight:bold;">: {{paid_days}}</small>
             </span>
-            <span class="oh-payslip__netpay-title">{% trans "LOP Days" %}
-                <small style="margin-left:93px ;font-weight:bold;">: {{unpaid_days}}</small>
+            <span class="oh-payslip__netpay-title">{% trans "No Pay Days" %}
+                <small style="margin-left:70px ;font-weight:bold;">: {{unpaid_days}}</small>
             </span>
             <span class="oh-payslip__netpay-title">
                 {% trans "Updated Basic Pay" %}
@@ -196,7 +196,7 @@
                 </tr>
             {% endfor %}
             <tr class="oh-payslip__table-tr">
-                <td class="oh-payslip__table-td">{% trans "Federal Tax" %}</td>
+                <td class="oh-payslip__table-td">{% trans "Payee Tax" %}</td>
                 <td class="oh-payslip__table-td">
                     {{federal_tax|floatformat:2|currency_symbol_position}}
                 </td>

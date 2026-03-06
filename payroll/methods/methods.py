@@ -389,7 +389,12 @@ def convert_year_tax_to_period(
 ):
     """
     Method to convert yearly taxable to monthly
+
+    Override the daily proration calculation and return monthly tax directly.
     """
+    # Calculate monthly tax directly (yearly / 12) instead of using daily proration
+    if yearly_tax:
+        return yearly_tax / 12
     return federal_tax_for_period
 
 
