@@ -263,8 +263,29 @@
 						</tr>
 					</tfoot>
 				</table>
+			</div>
+			<!-- End of Payslip Table -->
 
-				{% if employer_contributions %}
+			<!-- Payslip Payable -->
+
+			<table class="oh-payslip__table">
+				<thead class="oh-payslip__table-thead">
+					<tr class="oh-payslip__table-row padding">
+						<th class="oh-payslip__table-th">
+							{% trans "Total Net Payable " %}<br />
+							<span style="font-size: 10px">{% trans "Gross Earnings - Total Deductions" %}</span>
+						</th>
+						<th class="oh-payslip__table-th" style="font-size: 14px">
+							{{net_pay|floatformat:2|currency_symbol_position}}
+						</th>
+					</tr>
+				</thead>
+			</table>
+
+			<!-- End of Payslip Payable -->
+
+			{% if employer_contributions %}
+			<div class="oh-payslip__table-wrapper">
 				<table class="oh-payslip__table">
 					<thead class="oh-payslip__table-thead">
 						<tr class="oh-payslip__table-row">
@@ -291,27 +312,8 @@
 						</tr>
 					</tfoot>
 				</table>
-				{% endif %}
 			</div>
-			<!-- End of Payslip Table -->
-
-			<!-- Payslip Payable -->
-
-			<table class="oh-payslip__table">
-				<thead class="oh-payslip__table-thead">
-					<tr class="oh-payslip__table-row padding">
-						<th class="oh-payslip__table-th">
-							{% trans "Total Net Payable " %}<br />
-							<span style="font-size: 10px">{% trans "Gross Earnings - Total Deductions" %}</span>
-						</th>
-						<th class="oh-payslip__table-th" style="font-size: 14px">
-							{{net_pay|floatformat:2|currency_symbol_position}}
-						</th>
-					</tr>
-				</thead>
-			</table>
-
-			<!-- End of Payslip Payable -->
+			{% endif %}
 		</div>
 	</div>
 </body>

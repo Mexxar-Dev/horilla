@@ -219,9 +219,10 @@
             <tr class="oh-payslip__table-tr" style="color: gray;">
                 <td class="oh-payslip__table-td">
                     {{deduction.title}}
-                        <i style="font-style: italic; margin-left: 10px; font-weight: normal;"
-                        title="{% trans "Net Pay Deductions" %}">
-                            <ion-icon name="information-circle-outline" style="color:blue;" role="img" class="md hydrated" aria-label="information circle outline"></ion-icon>
+                    <i style="font-style: italic; margin-left: 10px; font-weight: normal;" title="{% trans " Net Pay
+                        Deductions" %}">
+                        <ion-icon name="information-circle-outline" style="color:blue;" role="img" class="md hydrated"
+                            aria-label="information circle outline"></ion-icon>
                     </i>
                 </td>
                 <td class="oh-payslip__table-td">
@@ -243,8 +244,26 @@
             </tr>
         </tfoot>
     </table>
+</div>
+<!-- End of Payslip Table -->
 
-    {% if employer_contributions %}
+<!-- Payslip Payable -->
+<div class="oh-payslip__net-payable">
+    <div class="oh-payslip__net-payable-left">
+        <h2 class="oh-payslip__net-payable-title">
+            {% trans "Total Net Payable" %}
+        </h2>
+        <p class="oh-payslip__net-payable-subtext">
+            {% trans "Gross Earnings - Total Deductions" %}
+        </p>
+    </div>
+    <div class="oh-payslip__net-payable-right">
+        <span class="oh-payslip__net-payable-amount">{{net_pay|floatformat:2|currency_symbol_position}}</span>
+    </div>
+</div>
+
+{% if employer_contributions %}
+<div class="oh-payslip__table-wrapper" style="margin-top: 25px;">
     <table class="oh-payslip__table">
         <thead class="oh-payslip__table-thead">
             <tr class="oh-payslip__table-row">
@@ -271,21 +290,5 @@
             </tr>
         </tfoot>
     </table>
-    {% endif %}
 </div>
-<!-- End of Payslip Table -->
-
-<!-- Payslip Payable -->
-<div class="oh-payslip__net-payable">
-    <div class="oh-payslip__net-payable-left">
-        <h2 class="oh-payslip__net-payable-title">
-            {% trans "Total Net Payable" %}
-        </h2>
-        <p class="oh-payslip__net-payable-subtext">
-            {% trans "Gross Earnings - Total Deductions" %}
-        </p>
-    </div>
-    <div class="oh-payslip__net-payable-right">
-        <span class="oh-payslip__net-payable-amount">{{net_pay|floatformat:2|currency_symbol_position}}</span>
-    </div>
-</div>
+{% endif %}

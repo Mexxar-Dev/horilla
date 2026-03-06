@@ -404,9 +404,28 @@
             </tr>
           </tfoot>
         </table>
+      </div>
+      <div class="oh-footer-total mt-4">
+        <table class="w-100">
+          <tbody>
+            <tr class="">
+              <td class="">
+                <h5>{% trans "Total Net Payable" %}</h5>
+                <p class="oh-footer-gross-text">
+                  {% trans "Gross earning - Total Deduction" %}
+                </p>
+              </td>
+              <td class="oh-footer-total-amount">
+                {{net_pay|floatformat:2|currency_symbol_position}}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-        {% if employer_contributions %}
-        <table class="w-100 oh-allowance-table mt-4">
+      {% if employer_contributions %}
+      <div class="oh-footer-total mt-4">
+        <table class="w-100 oh-allowance-table">
           <thead>
             <tr class="oh-bg-color">
               <th class="">{% trans "Employer Contributions" %}</th>
@@ -432,25 +451,8 @@
             </tr>
           </tfoot>
         </table>
-        {% endif %}
       </div>
-      <div class="oh-footer-total mt-4">
-        <table class="w-100">
-          <tbody>
-            <tr class="">
-              <td class="">
-                <h5>{% trans "Total Net Payable" %}</h5>
-                <p class="oh-footer-gross-text">
-                  {% trans "Gross earning - Total Deduction" %}
-                </p>
-              </td>
-              <td class="oh-footer-total-amount">
-                {{net_pay|floatformat:2|currency_symbol_position}}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      {% endif %}
 
     </div>
   </div>
