@@ -351,10 +351,7 @@ def months_between_range(wage, start_date, end_date):
             # month period
             "working_days_on_period": total_working_days_on_period,
             "working_days_on_month": working_days_on_month,
-            "per_day_amount": (
-                wage / working_days_on_month if working_days_on_month else 0.0
-            ),
-            # if working_days_on_month != 0 else 0 #769,
+            "per_day_amount": wage / 30,
         }
 
         months_data.append(month_info)
@@ -432,9 +429,7 @@ def monthly_computation(employee, wage, start_date, end_date, *args, **kwargs):
     leave_data = get_leaves(employee, start_date, end_date)
 
     for data in month_data:
-        basic_pay = basic_pay + (
-            data["working_days_on_period"] * data["per_day_amount"]
-        )
+        basic_pay = basic_pay + (30 * data["per_day_amount"])
 
     contract = employee.contract_set.filter(contract_status="active").first()
     loss_of_pay = 0
@@ -476,7 +471,7 @@ def monthly_computation(employee, wage, start_date, end_date, *args, **kwargs):
         is_active=True, contract_status="active"
     ).first()
     unpaid_leaves = abs(leave_data["unpaid_leaves"] - unpaid_half_leaves)
-    paid_days = month_data[0]["working_days_on_period"] - unpaid_leaves
+    paid_days = 30 - unpaid_leaves
     daily_computed_salary = get_daily_salary(wage=wage, wage_date=start_date)[
         "day_wage"
     ]
