@@ -97,7 +97,7 @@
         <tbody class="oh-payslip__table-tbody">
             <tr class="oh-payslip__table-tr">
                 <td class="oh-payslip__table-td"
-                    title="{% trans 'Some deductions will update basic pay before payslip calculation starts, eg: LOP is Deduducted from basic pay if `Deduct leave from basic pay` field is enabled on the contract, and also with the update compensation deduction through' %}">
+                    title="{% trans 'Some deductions will update basic pay before payslip calculation starts, eg: No Pay is Deduducted from basic pay if `Deduct leave from basic pay` field is enabled on the contract, and also with the update compensation deduction through' %}">
                     {% trans "Basic Pay" %}
                 </td>
                 <td class="oh-payslip__table-td" colspan="2">
@@ -146,7 +146,7 @@
         </thead>
         <tbody class="oh-payslip__table-tbody">
             <tr class="oh-payslip__table-tr">
-                <td class="oh-payslip__table-td">{% trans "Loss of Pay" %}</td>
+                <td class="oh-payslip__table-td">{% trans "No Pay" %}</td>
                 <td class="oh-payslip__table-td">
                     {{loss_of_pay|floatformat:2|currency_symbol_position}}
                 </td>
