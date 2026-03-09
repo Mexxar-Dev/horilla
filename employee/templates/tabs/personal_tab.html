@@ -11,6 +11,21 @@
 				<ul class="oh-profile__card-info-list">
 					<li class="oh-profile__card-info-item">
 						<span class="oh-profile__info-label mb-1">
+							<ion-icon name="id-card-outline"></ion-icon>
+							<span>{% trans "NIC" %}</span>
+						</span>
+						<span class="oh-profile__info-value">{{employee.nic|default:_("None")}}</span>
+					</li>
+
+					<li class="oh-profile__card-info-item">
+						<span class="oh-profile__info-label mb-1">
+							<ion-icon name="document-text-outline"></ion-icon>
+							<span>{% trans "EPF Number" %}</span>
+						</span>
+						<span class="oh-profile__info-value">{{employee.epf_number|default:_("None")}}</span>
+					</li>
+					<li class="oh-profile__card-info-item">
+						<span class="oh-profile__info-label mb-1">
 							<ion-icon name="calendar-outline"></ion-icon>
 							<span>{% trans "Date of Birth" %}</span>
 						</span>

@@ -444,6 +444,7 @@ class CandidateCreationForm(BaseModelForm):
         fields = [
             "profile",
             "name",
+            "nic",
             "portfolio",
             "email",
             "mobile",
