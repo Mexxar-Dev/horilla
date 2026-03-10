@@ -371,8 +371,28 @@ class PayslipForm(ModelForm):
             }
         )
         if self.instance.pk is None:
-            self.initial["start_date"] = datetime.date.today().replace(day=1)
-            self.initial["end_date"] = datetime.date.today()
+            # Default to the most recently completed payroll period (15th to 14th)
+            today = datetime.date.today()
+
+            # If today is before the 15th, use previous month's period
+            # If today is 15th or after, use current month's period
+            if today.day < 15:
+                # Use period: 15th of 2 months ago to 14th of last month
+                end_date = (today.replace(day=1) - datetime.timedelta(days=1)).replace(
+                    day=14
+                )
+                start_date = (
+                    end_date.replace(day=1) - datetime.timedelta(days=1)
+                ).replace(day=15)
+            else:
+                # Use period: 15th of last month to 14th of current month
+                end_date = today.replace(day=14)
+                start_date = (
+                    today.replace(day=1) - datetime.timedelta(days=1)
+                ).replace(day=15)
+
+            self.initial["end_date"] = end_date
+            self.initial["start_date"] = start_date
 
     class Meta:
         """

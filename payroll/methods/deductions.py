@@ -35,10 +35,14 @@ def update_compensation_deduction(
         employer_contribution_amount = 0
         if max(0, deduction.employer_rate):
             employer_contribution_amount = (amount * deduction.employer_rate) / 100
+        title = deduction.title
+        if not deduction.is_fixed and employee_rate:
+            title = f"{deduction.title} ({employee_rate}%)"
         deductions.append(
             {
                 "deduction_id": deduction.id,
-                "title": deduction.title,
+                "title": title,
+                "base_title": deduction.title,
                 "amount": amount,
                 "employer_contribution_rate": deduction.employer_rate,
                 "employer_contribution_amount": employer_contribution_amount,

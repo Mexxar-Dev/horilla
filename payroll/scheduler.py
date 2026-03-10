@@ -53,9 +53,12 @@ def generate_payslip(date, companies, all):
 
     # Remove duplicates if an employee has multiple active contracts
     active_employees = active_employees.distinct()
-    # find the date range
-    start_date = date - relativedelta(months=1)
-    end_date = date - timedelta(days=1)
+    # find the date range - 15th of previous month to 14th of current month
+    # For example: if today is March 31, period is Feb 15 to Mar 14
+    current_month_14th = date.replace(day=14)
+    previous_month_15th = (date.replace(day=1) - timedelta(days=1)).replace(day=15)
+    start_date = previous_month_15th
+    end_date = current_month_14th
     # Payslip creation
     for employee in active_employees:
         payslip = Payslip.objects.filter(
