@@ -570,13 +570,14 @@ def calculate_employer_contribution(data):
                     ).first()
                     if object:
                         amount = pay_head_data.get(object.based_on)
-                        employer_contribution_amount = (
-                            amount * object.employer_rate
-                        ) / 100
-                        deduction["based_on"] = object.based_on
-                        deduction["employer_contribution_amount"] = (
-                            employer_contribution_amount
-                        )
+                        if amount is not None:
+                            employer_contribution_amount = (
+                                amount * object.employer_rate
+                            ) / 100
+                            deduction["based_on"] = object.based_on
+                            deduction["employer_contribution_amount"] = (
+                                employer_contribution_amount
+                            )
     return data
 
 

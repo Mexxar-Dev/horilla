@@ -172,6 +172,8 @@ def payroll_calculation(employee, start_date, end_date):
     federal_tax = calculate_taxable_amount(**kwargs)
 
     total_allowance = sum(item["amount"] for item in allowances["allowances"])
+    total_basic_pay_deduction = sum(item["amount"] for item in basic_pay_deductions)
+    total_gross_pay_deduction = sum(item["amount"] for item in gross_pay_deductions)
     total_pretax_deduction = sum(
         item["amount"] for item in pretax_deductions["pretax_deductions"]
     )
@@ -183,7 +185,9 @@ def payroll_calculation(employee, start_date, end_date):
     )
 
     total_deductions = (
-        total_pretax_deduction
+        total_basic_pay_deduction
+        + total_gross_pay_deduction
+        + total_pretax_deduction
         + total_post_tax_deduction
         + total_tax_deductions
         + federal_tax

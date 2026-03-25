@@ -34,7 +34,9 @@ def update_compensation_deduction(
         compensation_amount = compensation_amount - float(amount)
         employer_contribution_amount = 0
         if max(0, deduction.employer_rate):
-            employer_contribution_amount = (amount * deduction.employer_rate) / 100
+            # Employer contribution should be based on the same base (compensation_amount)
+            # not on the employee's deduction amount
+            employer_contribution_amount = (temp * deduction.employer_rate) / 100
         title = deduction.title
         if not deduction.is_fixed and employee_rate:
             title = f"{deduction.title} ({employee_rate}%)"
