@@ -550,6 +550,28 @@ class PayslipExportColumnForm(forms.Form):
         ],
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Build dynamic choices including deductions
+        dynamic_choices = list(excel_columns)
+
+        # Add deductions from database
+        deductions = Deduction.objects.all()
+        for deduction in deductions:
+            # Employee contribution
+            if deduction.rate or deduction.is_fixed:
+                employee_key = f"deduction_employee_{deduction.id}"
+                employee_label = f"Employee - {deduction.title}"
+                dynamic_choices.append((employee_key, employee_label))
+
+            # Employer contribution
+            if deduction.employer_rate:
+                employer_key = f"deduction_employer_{deduction.id}"
+                employer_label = f"Employer - {deduction.title}"
+                dynamic_choices.append((employer_key, employer_label))
+
+        self.fields["selected_fields"].choices = dynamic_choices
+
 
 exclude_fields = ["id", "contract_document", "is_active", "note", "note", "created_at"]
 

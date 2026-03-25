@@ -479,6 +479,11 @@ def calculate_tax_deduction(*_args, **kwargs):
         title = deduction.title
         if not deduction.is_fixed and deduction.rate:
             title = f"{deduction.title} ({deduction.rate}%)"
+        # Calculate employer contribution amount
+        employer_contribution_amount = 0
+        if deduction.employer_rate and deduction.employer_rate > 0:
+            base_amount = kwargs.get(deduction.based_on, 0) or 0
+            employer_contribution_amount = (base_amount * deduction.employer_rate) / 100
         serialized_deduction = {
             "deduction_id": deduction.id,
             "title": title,
@@ -486,6 +491,7 @@ def calculate_tax_deduction(*_args, **kwargs):
             "is_tax": deduction.is_tax,
             "amount": amount,
             "employer_contribution_rate": deduction.employer_rate,
+            "employer_contribution_amount": employer_contribution_amount,
         }
         serialized_deductions.append(serialized_deduction)
     return {"tax_deductions": serialized_deductions}
@@ -588,6 +594,11 @@ def calculate_pre_tax_deduction(*_args, **kwargs):
         title = deduction.title
         if not deduction.is_fixed and deduction.rate:
             title = f"{deduction.title} ({deduction.rate}%)"
+        # Calculate employer contribution amount
+        employer_contribution_amount = 0
+        if deduction.employer_rate and deduction.employer_rate > 0:
+            base_amount = kwargs.get(deduction.based_on, 0) or 0
+            employer_contribution_amount = (base_amount * deduction.employer_rate) / 100
         serialized_deduction = {
             "deduction_id": deduction.id,
             "title": title,
@@ -595,6 +606,7 @@ def calculate_pre_tax_deduction(*_args, **kwargs):
             "is_pretax": deduction.is_pretax,
             "amount": amount,
             "employer_contribution_rate": deduction.employer_rate,
+            "employer_contribution_amount": employer_contribution_amount,
         }
         serialized_deductions.append(serialized_deduction)
     return {"pretax_deductions": serialized_deductions, "installments": installments}
@@ -688,6 +700,11 @@ def calculate_post_tax_deduction(*_args, **kwargs):
         title = deduction.title
         if not deduction.is_fixed and deduction.rate:
             title = f"{deduction.title} ({deduction.rate}%)"
+        # Calculate employer contribution amount
+        employer_contribution_amount = 0
+        if deduction.employer_rate and deduction.employer_rate > 0:
+            base_amount = kwargs.get(deduction.based_on, 0) or 0
+            employer_contribution_amount = (base_amount * deduction.employer_rate) / 100
         serialized_deduction = {
             "deduction_id": deduction.id,
             "title": title,
@@ -695,6 +712,7 @@ def calculate_post_tax_deduction(*_args, **kwargs):
             "is_pretax": deduction.is_pretax,
             "amount": amount,
             "employer_contribution_rate": deduction.employer_rate,
+            "employer_contribution_amount": employer_contribution_amount,
         }
         serialized_deductions.append(serialized_deduction)
     for deduction in post_tax_deductions:
@@ -735,6 +753,10 @@ def calculate_net_pay_deduction(net_pay, net_pay_deductions, **kwargs):
         title = deduction.title
         if not deduction.is_fixed and deduction.rate:
             title = f"{deduction.title} ({deduction.rate}%)"
+        # Calculate employer contribution amount
+        employer_contribution_amount = 0
+        if deduction.employer_rate and deduction.employer_rate > 0:
+            employer_contribution_amount = (net_pay * deduction.employer_rate) / 100
         serialized_deduction = {
             "deduction_id": deduction.id,
             "title": title,
@@ -742,6 +764,7 @@ def calculate_net_pay_deduction(net_pay, net_pay_deductions, **kwargs):
             "is_pretax": deduction.is_pretax,
             "amount": amount,
             "employer_contribution_rate": deduction.employer_rate,
+            "employer_contribution_amount": employer_contribution_amount,
         }
         net_deduction = amount + net_deduction
         serialized_net_pay_deductions.append(serialized_deduction)

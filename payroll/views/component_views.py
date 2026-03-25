@@ -1143,6 +1143,7 @@ def payslip_export(request):
         "paid": _("Paid"),
     }
     selected_columns = []
+    deduction_columns = []  # For dynamic deduction columns
     payslips_data = {}
     payslips = PayslipFilter(request.GET).qs
     today_date = date.today().strftime("%Y-%m-%d")
@@ -1156,12 +1157,41 @@ def payslip_export(request):
         id_list = json.loads(ids)
         payslips = Payslip.objects.filter(id__in=id_list)
 
+    # Process standard columns
     for field in forms.excel_columns:
         value = field[0]
         key = field[1]
         if value in selected_fields:
             selected_columns.append((value, key))
 
+    # Process dynamic deduction columns
+    for field_key in selected_fields:
+        if field_key.startswith("deduction_employee_"):
+            deduction_id = int(field_key.replace("deduction_employee_", ""))
+            deduction = Deduction.objects.filter(id=deduction_id).first()
+            if deduction:
+                deduction_columns.append(
+                    {
+                        "key": field_key,
+                        "label": f"Employee - {deduction.title}",
+                        "deduction_id": deduction_id,
+                        "type": "employee",
+                    }
+                )
+        elif field_key.startswith("deduction_employer_"):
+            deduction_id = int(field_key.replace("deduction_employer_", ""))
+            deduction = Deduction.objects.filter(id=deduction_id).first()
+            if deduction:
+                deduction_columns.append(
+                    {
+                        "key": field_key,
+                        "label": f"Employer - {deduction.title}",
+                        "deduction_id": deduction_id,
+                        "type": "employer",
+                    }
+                )
+
+    # Process standard columns
     for column_value, column_name in selected_columns:
         nested_attributes = column_value.split("__")
         payslips_data[column_name] = []
@@ -1185,6 +1215,31 @@ def payslip_export(request):
             else:
                 data = str(value) if value is not None else ""
             payslips_data[column_name].append(data)
+
+    # Process deduction columns from pay_head_data
+    for deduction_col in deduction_columns:
+        payslips_data[deduction_col["label"]] = []
+        for payslip in payslips:
+            amount = 0
+            pay_head_data = payslip.pay_head_data or {}
+            # Search through all deduction lists
+            all_deduction_lists = [
+                pay_head_data.get("basic_pay_deductions", []),
+                pay_head_data.get("gross_pay_deductions", []),
+                pay_head_data.get("pretax_deductions", []),
+                pay_head_data.get("post_tax_deductions", []),
+                pay_head_data.get("tax_deductions", []),
+                pay_head_data.get("net_deductions", []),
+            ]
+            for deduction_list in all_deduction_lists:
+                for deduction in deduction_list:
+                    if deduction.get("deduction_id") == deduction_col["deduction_id"]:
+                        if deduction_col["type"] == "employee":
+                            amount = deduction.get("amount", 0)
+                        else:  # employer
+                            amount = deduction.get("employer_contribution_amount", 0)
+                        break
+            payslips_data[deduction_col["label"]].append(amount)
 
     data_frame = pd.DataFrame(data=payslips_data)
     response = HttpResponse(
