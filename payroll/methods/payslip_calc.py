@@ -28,6 +28,54 @@ def return_none(a, b):
     return None
 
 
+def get_late_penalty_deduction(employee, start_date, end_date, penalty_tiers):
+    """
+    Calculate the late penalty deduction percentage based on late attendance occasions.
+
+    Args:
+        employee: The employee object
+        start_date: Start date of the payroll period
+        end_date: End date of the payroll period
+        penalty_tiers: List of penalty tier dicts with min_occasions, max_occasions, deduction_percent
+
+    Returns:
+        tuple: (deduction_percent, late_count)
+    """
+    if not penalty_tiers:
+        return 0, 0
+
+    if not apps.is_installed("attendance"):
+        return 0, 0
+
+    AttendanceLateComeEarlyOut = get_horilla_model_class(
+        app_label="attendance", model="attendancelatecomeearlyout"
+    )
+
+    # Count late occasions in the payroll period
+    late_count = AttendanceLateComeEarlyOut.objects.filter(
+        employee_id=employee,
+        type="late_come",
+        attendance_id__attendance_date__gte=start_date,
+        attendance_id__attendance_date__lte=end_date,
+    ).count()
+
+    # Find applicable penalty tier
+    deduction_percent = 0
+    for tier in penalty_tiers:
+        min_occ = tier.get("min_occasions", 0)
+        max_occ = tier.get("max_occasions")
+        if max_occ is None:
+            # No upper limit (e.g., "more than 20")
+            if late_count >= min_occ:
+                deduction_percent = tier.get("deduction_percent", 0)
+        else:
+            if min_occ <= late_count <= max_occ:
+                deduction_percent = tier.get("deduction_percent", 0)
+                break
+
+    return deduction_percent, late_count
+
+
 operator_mapping = {
     "equal": operator.eq,
     "notequal": operator.ne,
@@ -404,21 +452,49 @@ def calculate_allowance(**kwargs):
 
     # Serialize taxable allowances
     for allowance, amount in zip(tax_allowances, tax_allowances_amt):
+        # Apply late penalty if configured
+        original_amount = amount
+        late_penalty_percent = 0
+        late_count = 0
+        if allowance.has_late_penalty and allowance.late_penalty_tiers:
+            late_penalty_percent, late_count = get_late_penalty_deduction(
+                employee, start_date, end_date, allowance.late_penalty_tiers
+            )
+            if late_penalty_percent > 0:
+                amount = amount * (1 - late_penalty_percent / 100)
+
         serialized_allowance = {
             "allowance_id": allowance.id,
             "title": allowance.title,
             "is_taxable": allowance.is_taxable,
             "amount": amount,
+            "original_amount": original_amount,
+            "late_penalty_percent": late_penalty_percent,
+            "late_count": late_count,
         }
         serialized_allowances.append(serialized_allowance)
 
     # Serialize no-taxable allowances
     for allowance, amount in zip(no_tax_allowances, no_tax_allowances_amt):
+        # Apply late penalty if configured
+        original_amount = amount
+        late_penalty_percent = 0
+        late_count = 0
+        if allowance.has_late_penalty and allowance.late_penalty_tiers:
+            late_penalty_percent, late_count = get_late_penalty_deduction(
+                employee, start_date, end_date, allowance.late_penalty_tiers
+            )
+            if late_penalty_percent > 0:
+                amount = amount * (1 - late_penalty_percent / 100)
+
         serialized_allowance = {
             "allowance_id": allowance.id,
             "title": allowance.title,
             "is_taxable": allowance.is_taxable,
             "amount": amount,
+            "original_amount": original_amount,
+            "late_penalty_percent": late_penalty_percent,
+            "late_count": late_count,
         }
         serialized_allowances.append(serialized_allowance)
     return {"allowances": serialized_allowances}

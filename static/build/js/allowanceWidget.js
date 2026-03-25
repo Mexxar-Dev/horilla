@@ -138,7 +138,7 @@ function conditionalVisibility() {
   }
 
   if ($("#id_include_active_employees").is(":checked")) {
-    $("#id_is_condition_based").prop("checked",false)
+    $("#id_is_condition_based").prop("checked", false)
     $(
       "#id_specific_employees, [for=id_specific_employees],#id_is_condition_based, [for=id_is_condition_based]"
     ).hide();
@@ -212,6 +212,15 @@ function conditionalVisibility() {
     }
 
   }
+
+  // Late penalty conditional visibility
+  if ($("#id_has_late_penalty").is(":checked")) {
+    $("#id_late_penalty_tiers, [for='id_late_penalty_tiers']").show();
+    $("#id_late_penalty_tiers, [for='id_late_penalty_tiers']").parent().show();
+  } else {
+    $("#id_late_penalty_tiers, [for='id_late_penalty_tiers']").hide();
+    $("#id_late_penalty_tiers, [for='id_late_penalty_tiers']").parent().hide();
+  }
 }
 $(document).ready(function () {
   $("select, [type=checkbox]").change(function (e) {
@@ -219,6 +228,10 @@ $(document).ready(function () {
     conditionalVisibility();
   });
   $("#id_condition, #id_field, #id_value").parent().attr("class", "col-12 col-md-4 condition-highlight");
+
+  // Make late penalty fields horizontal (same row)
+  $("#id_has_late_penalty").parent().attr("class", "col-12 col-md-4");
+  $("#id_late_penalty_tiers").parent().attr("class", "col-12 col-md-8");
   addMore = $(`
   <div class="mt-3" style="
   display: inline-block;
