@@ -423,10 +423,21 @@ def monthly_computation(employee, wage, start_date, end_date, *args, **kwargs):
 
     leave_data = get_leaves(employee, start_date, end_date)
 
-    # Calculate basic pay for the 30-day period (not per month)
-    # Since per_day_amount = wage / 30, basic_pay = 30 * (wage / 30) = wage
+    # Calculate payable days for the period
+    # Standard period is 15th of prev month to 14th of current month (30 days)
+    # If start_date < 15th (e.g., employee joined mid-period), pro-rate the salary
     per_day_amount = wage / 30
-    basic_pay = 30 * per_day_amount
+    actual_days = (end_date - start_date).days + 1
+
+    # Check if this is a standard period (start on 15th) or adjusted period
+    if start_date.day == 15:
+        # Standard period - use fixed 30 days
+        payable_days = 30
+    else:
+        # Adjusted period - use actual days, capped at 30
+        payable_days = min(actual_days, 30)
+
+    basic_pay = payable_days * per_day_amount
 
     contract = employee.contract_set.filter(contract_status="active").first()
     loss_of_pay = 0
@@ -468,7 +479,7 @@ def monthly_computation(employee, wage, start_date, end_date, *args, **kwargs):
         is_active=True, contract_status="active"
     ).first()
     unpaid_leaves = abs(leave_data["unpaid_leaves"] - unpaid_half_leaves)
-    paid_days = 30 - unpaid_leaves
+    paid_days = payable_days - unpaid_leaves
     daily_computed_salary = get_daily_salary(wage=wage, wage_date=start_date)[
         "day_wage"
     ]
