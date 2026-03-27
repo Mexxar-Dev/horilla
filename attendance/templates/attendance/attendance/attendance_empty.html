@@ -53,6 +53,47 @@
     </div>
 </div>
 
+<div class="oh-modal" id="zktecoImport" role="dialog" aria-labelledby="zktecoImport" aria-hidden="true">
+    <div class="oh-modal__dialog">
+        <div class="oh-modal__dialog-header">
+            <h2 class="oh-modal__dialog-title">
+                {% trans "ZKTeco Import" %}
+            </h2>
+            <button class="oh-modal__close" aria-label="Close">
+                <ion-icon name="close-outline"></ion-icon>
+            </button>
+            <div class="oh-modal__dialog-body p-0 pt-2" id="zktecoImportModalBody">
+                <form hx-post="{% url 'zkteco-attendance-import' %}" hx-encoding="multipart/form-data"
+                    hx-target="#zktecoImportModalBody" id="zktecoImportForm">
+                    {% csrf_token %}
+                    <div class="oh-modal__dialog-body mr-5" id="zktecoUploading" style="display: none">
+                        <div class="loader-container">
+                            <div class="loader"></div>
+                            <div class="loader-text">{% trans "Uploading..." %}</div>
+                        </div>
+                    </div>
+                    <div id="zktecoUploadContainer">
+                        <p class="text-muted small mb-2">
+                            {% trans "Import attendance data from ZKTeco fingerprint machine CSV/Excel export." %}
+                        </p>
+                        <label class="oh-dropdown__import-label" for="zktecoUploadFile">
+                            <ion-icon name="finger-print" class="oh-dropdown__import-form-icon"></ion-icon>
+                            <span class="oh-dropdown__import-form-title">{% trans "Upload ZKTeco File" %}</span>
+                            <span class="oh-dropdown__import-form-text">{% trans "CSV or Excel from In-Out Report"
+                                %}</span>
+                        </label>
+                        <input type="file" name="zkteco_import" id="zktecoUploadFile" required
+                            accept=".csv,.xlsx,.xls" />
+                    </div>
+                    <button type="submit" class="oh-btn oh-btn--small oh-btn--secondary w-100 mt-3">
+                        {% trans "Upload" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <section class="oh-wrapper oh-main__topbar">
     <div class="oh-main__titlebar oh-main__titlebar--left">
         <h1 class="oh-main__titlebar-title fw-bold">
@@ -73,6 +114,10 @@
                         <li class="oh-dropdown__item">
                             <a href="#" class="oh-dropdown__link" id="attendance-info-import"
                                 data-toggle="oh-modal-toggle" data-target="#attendanceImport">{% trans "Import" %}</a>
+                        </li>
+                        <li class="oh-dropdown__item">
+                            <a href="#" class="oh-dropdown__link" data-toggle="oh-modal-toggle"
+                                data-target="#zktecoImport">{% trans "ZKTeco Import" %}</a>
                         </li>
                         {% endif %}
                     </ul>

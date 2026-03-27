@@ -1711,12 +1711,12 @@ def user_request_one_view(request, id):
     """
     attendance_request = Attendance.objects.get(id=id)
 
-    at_work_seconds = attendance_request.at_work_second
+    at_work_seconds = attendance_request.at_work_second or 0
     hours_at_work = at_work_seconds // 3600
     minutes_at_work = (at_work_seconds % 3600) // 60
     at_work = "{:02}:{:02}".format(hours_at_work, minutes_at_work)
 
-    over_time_seconds = attendance_request.overtime_second
+    over_time_seconds = attendance_request.overtime_second or 0
     hours_over_time = over_time_seconds // 3600
     minutes_over_time = (over_time_seconds % 3600) // 60
     over_time = "{:02}:{:02}".format(hours_over_time, minutes_over_time)
