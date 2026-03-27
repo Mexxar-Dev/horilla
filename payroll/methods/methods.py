@@ -424,20 +424,35 @@ def monthly_computation(employee, wage, start_date, end_date, *args, **kwargs):
     leave_data = get_leaves(employee, start_date, end_date)
 
     # Calculate payable days for the period
-    # Standard period is 15th of prev month to 14th of current month (30 days)
-    # If start_date < 15th (e.g., employee joined mid-period), pro-rate the salary
+    # Standard period is 15th of prev month to 14th of current month
+    # Instead of calculating actual days worked, calculate unpaid days and deduct
+    # This handles Feb (28/29 days) and 31-day months correctly
     per_day_amount = wage / 30
-    actual_days = (end_date - start_date).days + 1
 
-    # Check if this is a standard period (start on 15th) or adjusted period
-    if start_date.day == 15:
-        # Standard period - use fixed 30 days
-        payable_days = 30
+    # Calculate the standard period start (15th of previous month)
+    if end_date.day == 14:
+        # Standard end date - calculate standard start (15th of prev month)
+        standard_start = date(end_date.year, end_date.month, 15) - relativedelta(
+            months=1
+        )
     else:
-        # Adjusted period - use actual days, capped at 30
-        payable_days = min(actual_days, 30)
+        # Non-standard period - use start_date as reference
+        standard_start = date(start_date.year, start_date.month, 15)
+        if start_date.day < 15:
+            standard_start = standard_start - relativedelta(months=1)
 
-    basic_pay = payable_days * per_day_amount
+    # Calculate unpaid days (days before employee's start date within the period)
+    if start_date > standard_start:
+        # Employee joined after period started - calculate missed days
+        unpaid_days_before_joining = (start_date - standard_start).days
+        # Cap at 30 days max deduction
+        unpaid_days_before_joining = min(unpaid_days_before_joining, 30)
+    else:
+        unpaid_days_before_joining = 0
+
+    # Full wage minus deduction for unpaid days
+    payable_days = 30 - unpaid_days_before_joining
+    basic_pay = wage - (unpaid_days_before_joining * per_day_amount)
 
     contract = employee.contract_set.filter(contract_status="active").first()
     loss_of_pay = 0
