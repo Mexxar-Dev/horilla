@@ -1193,28 +1193,58 @@ def payslip_export(request):
                 }
             )
 
-    # Process dynamic deduction columns
-    for field_key in selected_fields:
-        if field_key.startswith("deduction_employee_"):
-            deduction_id = int(field_key.replace("deduction_employee_", ""))
-            deduction = Deduction.objects.filter(id=deduction_id).first()
-            if deduction:
+    # Check if individual deductions checkbox is selected
+    include_individual_deductions = (
+        request.GET.get("include_individual_deductions") == "on"
+    )
+
+    if include_individual_deductions:
+        # Collect all unique deductions from the payslips being exported
+        unique_deductions = {}
+        for payslip in payslips:
+            pay_head_data = payslip.pay_head_data or {}
+            # Search through all deduction lists
+            all_deduction_lists = [
+                pay_head_data.get("basic_pay_deductions", []),
+                pay_head_data.get("gross_pay_deductions", []),
+                pay_head_data.get("pretax_deductions", []),
+                pay_head_data.get("post_tax_deductions", []),
+                pay_head_data.get("tax_deductions", []),
+                pay_head_data.get("net_deductions", []),
+            ]
+            for deduction_list in all_deduction_lists:
+                for deduction in deduction_list:
+                    deduction_id = deduction.get("deduction_id")
+                    if deduction_id and deduction_id not in unique_deductions:
+                        unique_deductions[deduction_id] = {
+                            "title": deduction.get(
+                                "title", f"Deduction {deduction_id}"
+                            ),
+                            "has_employee": deduction.get("amount", 0) > 0
+                            or "amount" in deduction,
+                            "has_employer": deduction.get(
+                                "employer_contribution_amount", 0
+                            )
+                            > 0,
+                        }
+
+        # Create deduction columns for each unique deduction found
+        for deduction_id, info in unique_deductions.items():
+            # Employee contribution column
+            deduction_columns.append(
+                {
+                    "key": f"deduction_employee_{deduction_id}",
+                    "label": f"Employee - {info['title']}",
+                    "deduction_id": deduction_id,
+                    "type": "employee",
+                }
+            )
+            # Employer contribution column (if any payslip has employer contribution)
+            if info["has_employer"]:
                 deduction_columns.append(
                     {
-                        "key": field_key,
-                        "label": f"Employee - {deduction.title}",
-                        "deduction_id": deduction_id,
-                        "type": "employee",
-                    }
-                )
-        elif field_key.startswith("deduction_employer_"):
-            deduction_id = int(field_key.replace("deduction_employer_", ""))
-            deduction = Deduction.objects.filter(id=deduction_id).first()
-            if deduction:
-                deduction_columns.append(
-                    {
-                        "key": field_key,
-                        "label": f"Employer - {deduction.title}",
+                        "key": f"deduction_employer_{deduction_id}",
+                        "label": f"Employer - {info['title']}",
                         "deduction_id": deduction_id,
                         "type": "employer",
                     }
