@@ -1337,11 +1337,79 @@ def payslip_export(request):
     response["Content-Disposition"] = f'attachment; filename="{file_name}"'
 
     writer = pd.ExcelWriter(response, engine="xlsxwriter")
-    data_frame.style.applymap(lambda x: "text-align: center").to_excel(
-        writer, index=False, sheet_name="Sheet1"
-    )
+    data_frame.to_excel(writer, index=False, sheet_name="Sheet1")
+
+    workbook = writer.book
     worksheet = writer.sheets["Sheet1"]
-    worksheet.set_column("A:Z", 20)
+
+    # Define border style
+    border_style = {"border": 1, "border_color": "#D3D3D3"}
+
+    # Define formats for colored columns with borders
+    light_green_format = workbook.add_format(
+        {
+            "bg_color": "#C6EFCE",
+            **border_style,
+        }
+    )
+    light_green_header_format = workbook.add_format(
+        {
+            "bg_color": "#C6EFCE",
+            "bold": True,
+            **border_style,
+        }
+    )
+    light_red_format = workbook.add_format(
+        {
+            "bg_color": "#FFC7CE",
+            **border_style,
+        }
+    )
+    light_red_header_format = workbook.add_format(
+        {
+            "bg_color": "#FFC7CE",
+            "bold": True,
+            **border_style,
+        }
+    )
+
+    # Get column names from dataframe
+    columns = list(data_frame.columns)
+
+    # Collect allowance and deduction column labels
+    allowance_labels = [col["label"] for col in allowance_columns]
+    deduction_labels = [col["label"] for col in deduction_columns]
+
+    # Apply formatting to columns
+    for col_idx, col_name in enumerate(columns):
+        col_letter = get_column_letter(col_idx + 1)
+        worksheet.set_column(f"{col_letter}:{col_letter}", 20)
+
+        if col_name in allowance_labels:
+            # Light green for allowance columns
+            for row_idx in range(len(data_frame) + 1):  # +1 for header
+                cell_format = (
+                    light_green_header_format if row_idx == 0 else light_green_format
+                )
+                worksheet.write(
+                    row_idx,
+                    col_idx,
+                    col_name if row_idx == 0 else data_frame.iloc[row_idx - 1, col_idx],
+                    cell_format,
+                )
+        elif col_name in deduction_labels:
+            # Light red for deduction columns
+            for row_idx in range(len(data_frame) + 1):  # +1 for header
+                cell_format = (
+                    light_red_header_format if row_idx == 0 else light_red_format
+                )
+                worksheet.write(
+                    row_idx,
+                    col_idx,
+                    col_name if row_idx == 0 else data_frame.iloc[row_idx - 1, col_idx],
+                    cell_format,
+                )
+
     writer.close()
     return response
 
