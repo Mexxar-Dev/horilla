@@ -507,6 +507,8 @@ excel_columns = [
     ("badge_id", trans("Badge ID")),
     ("employee_first_name", trans("First Name")),
     ("employee_last_name", trans("Last Name")),
+    ("nic", trans("NIC")),
+    ("epf_number", trans("EPF Number")),
     ("email", trans("Email")),
     ("phone", trans("Phone")),
     ("experience", trans("Experience")),

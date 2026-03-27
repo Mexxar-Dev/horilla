@@ -515,6 +515,8 @@ class PayrollSettingsForm(ModelForm):
 excel_columns = [
     ("employee_id", _("Employee")),
     ("group_name", _("Batch")),
+    ("employee_id__employee_work_info__job_position_id__job_position", _("Job Role")),
+    ("employee_id__epf_number", _("EPF Number")),
     ("start_date", _("Start Date")),
     ("end_date", _("End Date")),
     ("contract_wage", _("Contract Wage")),
@@ -522,6 +524,9 @@ excel_columns = [
     ("gross_pay", _("Gross Pay")),
     ("deduction", _("Deduction")),
     ("net_pay", _("Net Pay")),
+    ("paid_days", _("Paid Days")),
+    ("no_pay_days", _("No Pay Days")),
+    ("loss_of_pay", _("No Pay Amount")),
     ("status", _("Status")),
     ("employee_id__employee_bank_details__bank_name", _("Bank Name")),
     ("employee_id__employee_bank_details__branch", _("Branch")),
@@ -550,12 +555,19 @@ class PayslipExportColumnForm(forms.Form):
         ],
     )
 
+    include_individual_allowances = forms.BooleanField(
+        required=False,
+        initial=False,
+        label=_("Individual Allowances"),
+        help_text=_("Include columns for each employee's individual allowances"),
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Build dynamic choices including deductions
         dynamic_choices = list(excel_columns)
 
-        # Add deductions from database
+        # Add deductions from database (allowances handled separately via checkbox)
         deductions = Deduction.objects.all()
         for deduction in deductions:
             # Employee contribution

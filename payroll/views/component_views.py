@@ -1164,6 +1164,35 @@ def payslip_export(request):
         if value in selected_fields:
             selected_columns.append((value, key))
 
+    # Check if individual allowances checkbox is selected
+    include_individual_allowances = (
+        request.GET.get("include_individual_allowances") == "on"
+    )
+    allowance_columns = []
+
+    if include_individual_allowances:
+        # Collect all unique allowances from the payslips being exported
+        unique_allowances = {}
+        for payslip in payslips:
+            pay_head_data = payslip.pay_head_data or {}
+            allowances = pay_head_data.get("allowances", [])
+            for allowance in allowances:
+                allowance_id = allowance.get("allowance_id")
+                if allowance_id and allowance_id not in unique_allowances:
+                    unique_allowances[allowance_id] = allowance.get(
+                        "title", f"Allowance {allowance_id}"
+                    )
+
+        # Create allowance columns for each unique allowance found
+        for allowance_id, title in unique_allowances.items():
+            allowance_columns.append(
+                {
+                    "key": f"allowance_{allowance_id}",
+                    "label": f"Allowance - {title}",
+                    "allowance_id": allowance_id,
+                }
+            )
+
     # Process dynamic deduction columns
     for field_key in selected_fields:
         if field_key.startswith("deduction_employee_"):
@@ -1191,8 +1220,25 @@ def payslip_export(request):
                     }
                 )
 
+    # Columns that come from pay_head_data instead of model attributes
+    pay_head_data_columns = {
+        "paid_days": "paid_days",
+        "no_pay_days": "unpaid_days",
+        "loss_of_pay": "loss_of_pay",
+    }
+
     # Process standard columns
     for column_value, column_name in selected_columns:
+        # Check if this column comes from pay_head_data
+        if column_value in pay_head_data_columns:
+            payslips_data[column_name] = []
+            pay_head_key = pay_head_data_columns[column_value]
+            for payslip in payslips:
+                pay_head_data = payslip.pay_head_data or {}
+                value = pay_head_data.get(pay_head_key, 0)
+                payslips_data[column_name].append(value if value is not None else 0)
+            continue
+
         nested_attributes = column_value.split("__")
         payslips_data[column_name] = []
         for payslip in payslips:
@@ -1215,6 +1261,19 @@ def payslip_export(request):
             else:
                 data = str(value) if value is not None else ""
             payslips_data[column_name].append(data)
+
+    # Process allowance columns from pay_head_data
+    for allowance_col in allowance_columns:
+        payslips_data[allowance_col["label"]] = []
+        for payslip in payslips:
+            amount = 0
+            pay_head_data = payslip.pay_head_data or {}
+            allowances = pay_head_data.get("allowances", [])
+            for allowance in allowances:
+                if allowance.get("allowance_id") == allowance_col["allowance_id"]:
+                    amount = allowance.get("amount", 0)
+                    break
+            payslips_data[allowance_col["label"]].append(amount)
 
     # Process deduction columns from pay_head_data
     for deduction_col in deduction_columns:
