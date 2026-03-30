@@ -13,6 +13,7 @@ import attendance.views.geofaceconfig
 import attendance.views.penalty
 import attendance.views.requests
 import attendance.views.search
+import attendance.views.zkteco_import
 import base
 from base.forms import AttendanceAllowedIPForm
 from base.models import AttendanceAllowedIP
@@ -30,6 +31,16 @@ urlpatterns = [
     path("attendance-excel", views.attendance_excel, name="attendance-excel"),
     path(
         "attendance-info-import", views.attendance_import, name="attendance-info-import"
+    ),
+    path(
+        "zkteco-attendance-import",
+        attendance.views.zkteco_import.zkteco_attendance_import,
+        name="zkteco-attendance-import",
+    ),
+    path(
+        "zkteco-download-errors",
+        attendance.views.zkteco_import.zkteco_download_errors,
+        name="zkteco-download-errors",
     ),
     path(
         "attendance-info-export-form",

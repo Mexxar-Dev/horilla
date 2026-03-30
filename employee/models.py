@@ -82,9 +82,13 @@ class Employee(models.Model):
         max_length=200, null=True, blank=True, verbose_name=_("Last Name")
     )
     employee_profile = models.ImageField(upload_to=upload_path, null=True, blank=True)
+    nic = models.CharField(max_length=12, verbose_name=_("NIC"))
     email = models.EmailField(max_length=254, unique=True)
     phone = models.CharField(
         max_length=25,
+    )
+    epf_number = models.CharField(
+        max_length=20, null=True, blank=True, verbose_name=_("EPF Number")
     )
     address = models.TextField(max_length=200, blank=True, null=True)
     country = models.CharField(max_length=100, blank=True, null=True)

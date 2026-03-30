@@ -370,6 +370,7 @@ class Candidate(HorillaModel):
         ("other", _("Other")),
     ]
     name = models.CharField(max_length=100, null=True, verbose_name=_("Name"))
+    nic = models.CharField(max_length=12, verbose_name=_("NIC"))
     profile = models.ImageField(upload_to=upload_path, null=True)  # 853
     portfolio = models.URLField(max_length=200, blank=True)
     recruitment_id = models.ForeignKey(

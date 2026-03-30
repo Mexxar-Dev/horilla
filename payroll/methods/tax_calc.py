@@ -68,7 +68,7 @@ def calculate_taxable_amount(**kwargs):
     check_start_date = datetime.date(year, 1, 1)
     check_end_date = datetime.date(year, 12, 31)
     total_days = (check_end_date - check_start_date).days + 1
-    yearly_income = income / num_days * total_days
+    yearly_income = income * 12
     yearly_income = compute_yearly_taxable_amount(income, yearly_income)
     yearly_income = round(yearly_income, 2)
     federal_tax = 0

@@ -371,8 +371,28 @@ class PayslipForm(ModelForm):
             }
         )
         if self.instance.pk is None:
-            self.initial["start_date"] = datetime.date.today().replace(day=1)
-            self.initial["end_date"] = datetime.date.today()
+            # Default to the most recently completed payroll period (15th to 14th)
+            today = datetime.date.today()
+
+            # If today is before the 15th, use previous month's period
+            # If today is 15th or after, use current month's period
+            if today.day < 15:
+                # Use period: 15th of 2 months ago to 14th of last month
+                end_date = (today.replace(day=1) - datetime.timedelta(days=1)).replace(
+                    day=14
+                )
+                start_date = (
+                    end_date.replace(day=1) - datetime.timedelta(days=1)
+                ).replace(day=15)
+            else:
+                # Use period: 15th of last month to 14th of current month
+                end_date = today.replace(day=14)
+                start_date = (
+                    today.replace(day=1) - datetime.timedelta(days=1)
+                ).replace(day=15)
+
+            self.initial["end_date"] = end_date
+            self.initial["start_date"] = start_date
 
     class Meta:
         """
@@ -495,6 +515,8 @@ class PayrollSettingsForm(ModelForm):
 excel_columns = [
     ("employee_id", _("Employee")),
     ("group_name", _("Batch")),
+    ("employee_id__employee_work_info__job_position_id__job_position", _("Job Role")),
+    ("employee_id__epf_number", _("EPF Number")),
     ("start_date", _("Start Date")),
     ("end_date", _("End Date")),
     ("contract_wage", _("Contract Wage")),
@@ -502,6 +524,9 @@ excel_columns = [
     ("gross_pay", _("Gross Pay")),
     ("deduction", _("Deduction")),
     ("net_pay", _("Net Pay")),
+    ("paid_days", _("Paid Days")),
+    ("no_pay_days", _("No Pay Days")),
+    ("loss_of_pay", _("No Pay Amount")),
     ("status", _("Status")),
     ("employee_id__employee_bank_details__bank_name", _("Bank Name")),
     ("employee_id__employee_bank_details__branch", _("Branch")),
@@ -529,6 +554,32 @@ class PayslipExportColumnForm(forms.Form):
             "status",
         ],
     )
+
+    include_individual_allowances = forms.BooleanField(
+        required=False,
+        initial=False,
+        label=_("Individual Allowances"),
+        help_text=_("Include columns for each employee's individual allowances"),
+    )
+
+    include_individual_deductions = forms.BooleanField(
+        required=False,
+        initial=False,
+        label=_("Individual Deductions"),
+        help_text=_("Include columns for each employee's individual deductions"),
+    )
+
+    include_federal_tax = forms.BooleanField(
+        required=False,
+        initial=False,
+        label=_("Federal Tax"),
+        help_text=_("Include column for federal tax (uses filing status name)"),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Deductions and allowances are handled via checkboxes, not per-item selection
+        self.fields["selected_fields"].choices = list(excel_columns)
 
 
 exclude_fields = ["id", "contract_document", "is_active", "note", "note", "created_at"]

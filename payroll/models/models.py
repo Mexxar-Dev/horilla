@@ -926,6 +926,21 @@ class Allowance(HorillaModel):
     end_range = models.FloatField(
         blank=True, null=True, help_text=_("The end amount of the pay-head range")
     )
+    # Late attendance penalty fields
+    has_late_penalty = models.BooleanField(
+        default=False,
+        verbose_name=_("Apply late attendance penalty"),
+        help_text=_("Reduce allowance based on late attendance occasions"),
+    )
+    late_penalty_tiers = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Late penalty tiers"),
+        help_text=_(
+            "JSON array of penalty tiers. Example: "
+            '[{"min_occasions": 5, "max_occasions": 10, "deduction_percent": 25}]'
+        ),
+    )
     company_id = models.ForeignKey(
         Company, null=True, editable=False, on_delete=models.PROTECT
     )
@@ -1268,10 +1283,15 @@ class Deduction(HorillaModel):
                         "If the 'Is fixed' field is disabled, the 'Based on' field is required."
                     )
                 )
-        if not self.is_fixed and self.based_on and not self.rate:
+        if (
+            not self.is_fixed
+            and self.based_on
+            and not self.rate
+            and not self.employer_rate
+        ):
             raise ValidationError(
                 _(
-                    "Employee rate must be specified for deductions that are not fixed amount"
+                    "Employee rate or employer rate must be specified for deductions that are not fixed amount"
                 )
             )
 

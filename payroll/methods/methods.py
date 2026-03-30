@@ -290,14 +290,9 @@ def daily_computation(employee, wage, start_date, end_date):
 def get_daily_salary(wage, wage_date) -> dict:
     """
     This method is used to calculate daily salary for the date
+    Using fixed 30-day month for consistency with company payroll policy
     """
-    last_day = calendar.monthrange(wage_date.year, wage_date.month)[1]
-    end_date = date(wage_date.year, wage_date.month, last_day)
-    start_date = date(wage_date.year, wage_date.month, 1)
-    working_days = get_working_days(start_date, end_date)["total_working_days"]
-    day_wage = (
-        wage / working_days if working_days else 0.0
-    )  # if working_days != 0 else 0 #769
+    day_wage = wage / 30
 
     return {
         "day_wage": day_wage,
@@ -351,10 +346,7 @@ def months_between_range(wage, start_date, end_date):
             # month period
             "working_days_on_period": total_working_days_on_period,
             "working_days_on_month": working_days_on_month,
-            "per_day_amount": (
-                wage / working_days_on_month if working_days_on_month else 0.0
-            ),
-            # if working_days_on_month != 0 else 0 #769,
+            "per_day_amount": wage / 30,
         }
 
         months_data.append(month_info)
@@ -389,7 +381,12 @@ def convert_year_tax_to_period(
 ):
     """
     Method to convert yearly taxable to monthly
+
+    Override the daily proration calculation and return monthly tax directly.
     """
+    # Calculate monthly tax directly (yearly / 12) instead of using daily proration
+    if yearly_tax:
+        return yearly_tax / 12
     return federal_tax_for_period
 
 
@@ -426,10 +423,36 @@ def monthly_computation(employee, wage, start_date, end_date, *args, **kwargs):
 
     leave_data = get_leaves(employee, start_date, end_date)
 
-    for data in month_data:
-        basic_pay = basic_pay + (
-            data["working_days_on_period"] * data["per_day_amount"]
+    # Calculate payable days for the period
+    # Standard period is 15th of prev month to 14th of current month
+    # Instead of calculating actual days worked, calculate unpaid days and deduct
+    # This handles Feb (28/29 days) and 31-day months correctly
+    per_day_amount = wage / 30
+
+    # Calculate the standard period start (15th of previous month)
+    if end_date.day == 14:
+        # Standard end date - calculate standard start (15th of prev month)
+        standard_start = date(end_date.year, end_date.month, 15) - relativedelta(
+            months=1
         )
+    else:
+        # Non-standard period - use start_date as reference
+        standard_start = date(start_date.year, start_date.month, 15)
+        if start_date.day < 15:
+            standard_start = standard_start - relativedelta(months=1)
+
+    # Calculate unpaid days (days before employee's start date within the period)
+    if start_date > standard_start:
+        # Employee joined after period started - calculate missed days
+        unpaid_days_before_joining = (start_date - standard_start).days
+        # Cap at 30 days max deduction
+        unpaid_days_before_joining = min(unpaid_days_before_joining, 30)
+    else:
+        unpaid_days_before_joining = 0
+
+    # Full wage minus deduction for unpaid days
+    payable_days = 30 - unpaid_days_before_joining
+    basic_pay = wage - (unpaid_days_before_joining * per_day_amount)
 
     contract = employee.contract_set.filter(contract_status="active").first()
     loss_of_pay = 0
@@ -471,7 +494,7 @@ def monthly_computation(employee, wage, start_date, end_date, *args, **kwargs):
         is_active=True, contract_status="active"
     ).first()
     unpaid_leaves = abs(leave_data["unpaid_leaves"] - unpaid_half_leaves)
-    paid_days = month_data[0]["working_days_on_period"] - unpaid_leaves
+    paid_days = payable_days - unpaid_leaves
     daily_computed_salary = get_daily_salary(wage=wage, wage_date=start_date)[
         "day_wage"
     ]
@@ -542,6 +565,8 @@ def calculate_employer_contribution(data):
     """
     pay_head_data = data["pay_data"]
     deductions_to_process = [
+        pay_head_data.get("basic_pay_deductions"),
+        pay_head_data.get("gross_pay_deductions"),
         pay_head_data.get("pretax_deductions"),
         pay_head_data.get("post_tax_deductions"),
         pay_head_data.get("tax_deductions"),
@@ -560,13 +585,14 @@ def calculate_employer_contribution(data):
                     ).first()
                     if object:
                         amount = pay_head_data.get(object.based_on)
-                        employer_contribution_amount = (
-                            amount * object.employer_rate
-                        ) / 100
-                        deduction["based_on"] = object.based_on
-                        deduction["employer_contribution_amount"] = (
-                            employer_contribution_amount
-                        )
+                        if amount is not None:
+                            employer_contribution_amount = (
+                                amount * object.employer_rate
+                            ) / 100
+                            deduction["based_on"] = object.based_on
+                            deduction["employer_contribution_amount"] = (
+                                employer_contribution_amount
+                            )
     return data
 
 

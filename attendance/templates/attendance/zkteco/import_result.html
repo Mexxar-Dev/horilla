@@ -1,0 +1,68 @@
+{% load i18n %}
+
+<div class="p-3">
+    {% if created_count > 0 %}
+    <div class="alert alert-success">
+        <strong>{% trans "Success!" %}</strong> {{ created_count }} {{ model }} {% trans "records imported
+        successfully." %}
+    </div>
+    {% endif %}
+
+    {% if error_count > 0 %}
+    <div class="alert alert-warning">
+        <strong>{% trans "Warning:" %}</strong> {{ error_count }} {% trans "records could not be imported." %}
+    </div>
+
+    {% if errors %}
+    <div class="mt-3">
+        <h6>{% trans "Error Details (first 20):" %}</h6>
+        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>{% trans "Employee ID" %}</th>
+                        <th>{% trans "Employee Name" %}</th>
+                        <th>{% trans "Date" %}</th>
+                        <th>{% trans "Error" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for error in errors %}
+                    <tr>
+                        <td>{{ error.employee_id|default:"-" }}</td>
+                        <td>{{ error.employee_name|default:"-" }}</td>
+                        <td>{{ error.date|default:"-" }}</td>
+                        <td class="text-danger">{{ error.error }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if has_downloadable_errors %}
+    <div class="mt-3">
+        <a href="{% url 'zkteco-download-errors' %}" class="oh-btn oh-btn--warning">
+            <ion-icon name="download-outline" class="mr-1"></ion-icon>
+            {% trans "Download Failed Records" %}
+        </a>
+        <small class="text-muted d-block mt-1">
+            {% trans "Download all failed records as Excel to review and fix" %}
+        </small>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if created_count == 0 and error_count == 0 %}
+    <div class="alert alert-info">
+        {% trans "No attendance records found in the file." %}
+    </div>
+    {% endif %}
+
+    <div class="mt-3 text-end">
+        <button type="button" class="oh-btn oh-btn--secondary" onclick="location.reload()">
+            {% trans "Close" %}
+        </button>
+    </div>
+</div>

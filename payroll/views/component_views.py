@@ -172,6 +172,8 @@ def payroll_calculation(employee, start_date, end_date):
     federal_tax = calculate_taxable_amount(**kwargs)
 
     total_allowance = sum(item["amount"] for item in allowances["allowances"])
+    total_basic_pay_deduction = sum(item["amount"] for item in basic_pay_deductions)
+    total_gross_pay_deduction = sum(item["amount"] for item in gross_pay_deductions)
     total_pretax_deduction = sum(
         item["amount"] for item in pretax_deductions["pretax_deductions"]
     )
@@ -183,7 +185,9 @@ def payroll_calculation(employee, start_date, end_date):
     )
 
     total_deductions = (
-        total_pretax_deduction
+        total_basic_pay_deduction
+        + total_gross_pay_deduction
+        + total_pretax_deduction
         + total_post_tax_deduction
         + total_tax_deductions
         + federal_tax
@@ -219,6 +223,38 @@ def payroll_calculation(employee, start_date, end_date):
     for deduction in update_net_pay_deductions:
         net_pay_deduction_list.append(deduction)
     net_pay = net_pay - net_pay_deductions["net_deduction"]
+
+    # Extract employer contributions from all deduction types
+    employer_contributions = []
+    all_deduction_lists = [
+        basic_pay_deductions,
+        gross_pay_deductions,
+        pretax_deductions["pretax_deductions"],
+        post_tax_deductions["post_tax_deductions"],
+        tax_deductions["tax_deductions"],
+        net_pay_deduction_list,
+    ]
+
+    for deduction_list in all_deduction_lists:
+        for deduction in deduction_list:
+            employer_amount = deduction.get("employer_contribution_amount", 0)
+            employer_rate = deduction.get("employer_contribution_rate", 0)
+            if employer_amount > 0:
+                base_title = deduction.get("base_title", deduction.get("title"))
+                title_with_rate = (
+                    f"{base_title} ({employer_rate}%)" if employer_rate else base_title
+                )
+                employer_contributions.append(
+                    {
+                        "title": title_with_rate,
+                        "employer_amount": employer_amount,
+                    }
+                )
+
+    total_employer_contribution = sum(
+        item["employer_amount"] for item in employer_contributions
+    )
+
     payslip_data = {
         "employee": employee,
         "contract_wage": contract_wage,
@@ -238,6 +274,8 @@ def payroll_calculation(employee, start_date, end_date):
         "total_deductions": total_deductions,
         "loss_of_pay": loss_of_pay,
         "federal_tax": federal_tax,
+        "employer_contributions": employer_contributions,
+        "total_employer_contribution": total_employer_contribution,
         "start_date": start_date,
         "end_date": end_date,
         "range": f"{start_date.strftime('%b %d %Y')} - {end_date.strftime('%b %d %Y')}",
@@ -246,6 +284,8 @@ def payroll_calculation(employee, start_date, end_date):
     data_to_json["employee"] = employee.id
     data_to_json["start_date"] = start_date.strftime("%Y-%m-%d")
     data_to_json["end_date"] = end_date.strftime("%Y-%m-%d")
+    data_to_json["employer_contributions"] = employer_contributions
+    data_to_json["total_employer_contribution"] = total_employer_contribution
     json_data = json.dumps(data_to_json)
 
     payslip_data["json_data"] = json_data
@@ -1103,6 +1143,7 @@ def payslip_export(request):
         "paid": _("Paid"),
     }
     selected_columns = []
+    deduction_columns = []  # For dynamic deduction columns
     payslips_data = {}
     payslips = PayslipFilter(request.GET).qs
     today_date = date.today().strftime("%Y-%m-%d")
@@ -1116,13 +1157,146 @@ def payslip_export(request):
         id_list = json.loads(ids)
         payslips = Payslip.objects.filter(id__in=id_list)
 
+    # Process standard columns
     for field in forms.excel_columns:
         value = field[0]
         key = field[1]
         if value in selected_fields:
             selected_columns.append((value, key))
 
+    # Check if individual allowances checkbox is selected
+    include_individual_allowances = (
+        request.GET.get("include_individual_allowances") == "on"
+    )
+    allowance_columns = []
+
+    if include_individual_allowances:
+        # Collect all unique allowances from the payslips being exported
+        unique_allowances = {}
+        for payslip in payslips:
+            pay_head_data = payslip.pay_head_data or {}
+            allowances = pay_head_data.get("allowances", [])
+            for allowance in allowances:
+                allowance_id = allowance.get("allowance_id")
+                if allowance_id and allowance_id not in unique_allowances:
+                    unique_allowances[allowance_id] = allowance.get(
+                        "title", f"Allowance {allowance_id}"
+                    )
+
+        # Create allowance columns for each unique allowance found
+        for allowance_id, title in unique_allowances.items():
+            allowance_columns.append(
+                {
+                    "key": f"allowance_{allowance_id}",
+                    "label": f"Allowance - {title}",
+                    "allowance_id": allowance_id,
+                }
+            )
+
+    # Check if individual deductions checkbox is selected
+    include_individual_deductions = (
+        request.GET.get("include_individual_deductions") == "on"
+    )
+
+    if include_individual_deductions:
+        # Collect all unique deductions from the payslips being exported
+        unique_deductions = {}
+        for payslip in payslips:
+            pay_head_data = payslip.pay_head_data or {}
+            # Search through all deduction lists
+            all_deduction_lists = [
+                pay_head_data.get("basic_pay_deductions", []),
+                pay_head_data.get("gross_pay_deductions", []),
+                pay_head_data.get("pretax_deductions", []),
+                pay_head_data.get("post_tax_deductions", []),
+                pay_head_data.get("tax_deductions", []),
+                pay_head_data.get("net_deductions", []),
+            ]
+            for deduction_list in all_deduction_lists:
+                for deduction in deduction_list:
+                    deduction_id = deduction.get("deduction_id")
+                    if deduction_id and deduction_id not in unique_deductions:
+                        unique_deductions[deduction_id] = {
+                            "title": deduction.get(
+                                "title", f"Deduction {deduction_id}"
+                            ),
+                            "has_employee": deduction.get("amount", 0) > 0
+                            or "amount" in deduction,
+                            "has_employer": deduction.get(
+                                "employer_contribution_amount", 0
+                            )
+                            > 0,
+                        }
+
+        # Create deduction columns for each unique deduction found
+        for deduction_id, info in unique_deductions.items():
+            # Employee contribution column
+            deduction_columns.append(
+                {
+                    "key": f"deduction_employee_{deduction_id}",
+                    "label": f"Employee - {info['title']}",
+                    "deduction_id": deduction_id,
+                    "type": "employee",
+                }
+            )
+            # Employer contribution column (if any payslip has employer contribution)
+            if info["has_employer"]:
+                deduction_columns.append(
+                    {
+                        "key": f"deduction_employer_{deduction_id}",
+                        "label": f"Employer - {info['title']}",
+                        "deduction_id": deduction_id,
+                        "type": "employer",
+                    }
+                )
+
+    # Columns that come from pay_head_data instead of model attributes
+    pay_head_data_columns = {
+        "paid_days": "paid_days",
+        "no_pay_days": "unpaid_days",
+        "loss_of_pay": "loss_of_pay",
+    }
+
+    # Check if federal tax checkbox is selected
+    include_federal_tax = request.GET.get("include_federal_tax") == "on"
+    federal_tax_columns = []
+
+    if include_federal_tax:
+        # Collect unique filing statuses from payslips
+        unique_filing_statuses = {}
+        for payslip in payslips:
+            # Get filing status from employee's contract
+            employee = payslip.employee_id
+            contract = Contract.objects.filter(
+                employee_id=employee, contract_status="active"
+            ).first()
+            if contract and contract.filing_status:
+                filing_status_id = contract.filing_status.id
+                filing_status_name = str(contract.filing_status)
+                if filing_status_id not in unique_filing_statuses:
+                    unique_filing_statuses[filing_status_id] = filing_status_name
+
+        # Create columns for each unique filing status
+        for filing_status_id, filing_status_name in unique_filing_statuses.items():
+            federal_tax_columns.append(
+                {
+                    "filing_status_id": filing_status_id,
+                    "label": filing_status_name,
+                }
+            )
+
+    # Process standard columns
     for column_value, column_name in selected_columns:
+        # Check if this column comes from pay_head_data
+        if column_value in pay_head_data_columns:
+            payslips_data[column_name] = []
+            pay_head_key = pay_head_data_columns[column_value]
+            for payslip in payslips:
+                pay_head_data = payslip.pay_head_data or {}
+                value = pay_head_data.get(pay_head_key, 0)
+                payslips_data[column_name].append(value if value is not None else 0)
+            continue
+
         nested_attributes = column_value.split("__")
         payslips_data[column_name] = []
         for payslip in payslips:
@@ -1146,6 +1320,63 @@ def payslip_export(request):
                 data = str(value) if value is not None else ""
             payslips_data[column_name].append(data)
 
+    # Process allowance columns from pay_head_data
+    for allowance_col in allowance_columns:
+        payslips_data[allowance_col["label"]] = []
+        for payslip in payslips:
+            amount = 0
+            pay_head_data = payslip.pay_head_data or {}
+            allowances = pay_head_data.get("allowances", [])
+            for allowance in allowances:
+                if allowance.get("allowance_id") == allowance_col["allowance_id"]:
+                    amount = allowance.get("amount", 0)
+                    break
+            payslips_data[allowance_col["label"]].append(amount)
+
+    # Process deduction columns from pay_head_data
+    for deduction_col in deduction_columns:
+        payslips_data[deduction_col["label"]] = []
+        for payslip in payslips:
+            amount = 0
+            pay_head_data = payslip.pay_head_data or {}
+            # Search through all deduction lists
+            all_deduction_lists = [
+                pay_head_data.get("basic_pay_deductions", []),
+                pay_head_data.get("gross_pay_deductions", []),
+                pay_head_data.get("pretax_deductions", []),
+                pay_head_data.get("post_tax_deductions", []),
+                pay_head_data.get("tax_deductions", []),
+                pay_head_data.get("net_deductions", []),
+            ]
+            for deduction_list in all_deduction_lists:
+                for deduction in deduction_list:
+                    if deduction.get("deduction_id") == deduction_col["deduction_id"]:
+                        if deduction_col["type"] == "employee":
+                            amount = deduction.get("amount", 0)
+                        else:  # employer
+                            amount = deduction.get("employer_contribution_amount", 0)
+                        break
+            payslips_data[deduction_col["label"]].append(amount)
+
+    # Process federal tax columns (using filing status name)
+    for federal_tax_col in federal_tax_columns:
+        payslips_data[federal_tax_col["label"]] = []
+        for payslip in payslips:
+            amount = 0
+            # Check if this payslip's employee has this filing status
+            employee = payslip.employee_id
+            contract = Contract.objects.filter(
+                employee_id=employee, contract_status="active"
+            ).first()
+            if (
+                contract
+                and contract.filing_status
+                and contract.filing_status.id == federal_tax_col["filing_status_id"]
+            ):
+                pay_head_data = payslip.pay_head_data or {}
+                amount = pay_head_data.get("federal_tax", 0)
+            payslips_data[federal_tax_col["label"]].append(amount)
+
     data_frame = pd.DataFrame(data=payslips_data)
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -1153,11 +1384,82 @@ def payslip_export(request):
     response["Content-Disposition"] = f'attachment; filename="{file_name}"'
 
     writer = pd.ExcelWriter(response, engine="xlsxwriter")
-    data_frame.style.applymap(lambda x: "text-align: center").to_excel(
-        writer, index=False, sheet_name="Sheet1"
-    )
+    data_frame.to_excel(writer, index=False, sheet_name="Sheet1")
+
+    workbook = writer.book
     worksheet = writer.sheets["Sheet1"]
-    worksheet.set_column("A:Z", 20)
+
+    # Define border style
+    border_style = {"border": 1, "border_color": "#D3D3D3"}
+
+    # Define formats for colored columns with borders
+    light_green_format = workbook.add_format(
+        {
+            "bg_color": "#C6EFCE",
+            **border_style,
+        }
+    )
+    light_green_header_format = workbook.add_format(
+        {
+            "bg_color": "#C6EFCE",
+            "bold": True,
+            **border_style,
+        }
+    )
+    light_red_format = workbook.add_format(
+        {
+            "bg_color": "#FFC7CE",
+            **border_style,
+        }
+    )
+    light_red_header_format = workbook.add_format(
+        {
+            "bg_color": "#FFC7CE",
+            "bold": True,
+            **border_style,
+        }
+    )
+
+    # Get column names from dataframe
+    columns = list(data_frame.columns)
+
+    # Collect allowance and deduction column labels (federal tax uses deduction styling)
+    allowance_labels = [col["label"] for col in allowance_columns]
+    deduction_labels = [col["label"] for col in deduction_columns]
+    federal_tax_labels = [col["label"] for col in federal_tax_columns]
+    # Combine deduction and federal tax labels for styling
+    all_deduction_labels = deduction_labels + federal_tax_labels
+
+    # Apply formatting to columns
+    for col_idx, col_name in enumerate(columns):
+        col_letter = get_column_letter(col_idx + 1)
+        worksheet.set_column(f"{col_letter}:{col_letter}", 20)
+
+        if col_name in allowance_labels:
+            # Light green for allowance columns
+            for row_idx in range(len(data_frame) + 1):  # +1 for header
+                cell_format = (
+                    light_green_header_format if row_idx == 0 else light_green_format
+                )
+                worksheet.write(
+                    row_idx,
+                    col_idx,
+                    col_name if row_idx == 0 else data_frame.iloc[row_idx - 1, col_idx],
+                    cell_format,
+                )
+        elif col_name in all_deduction_labels:
+            # Light red for deduction and federal tax columns
+            for row_idx in range(len(data_frame) + 1):  # +1 for header
+                cell_format = (
+                    light_red_header_format if row_idx == 0 else light_red_format
+                )
+                worksheet.write(
+                    row_idx,
+                    col_idx,
+                    col_name if row_idx == 0 else data_frame.iloc[row_idx - 1, col_idx],
+                    cell_format,
+                )
+
     writer.close()
     return response
 
