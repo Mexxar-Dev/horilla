@@ -1257,6 +1257,34 @@ def payslip_export(request):
         "loss_of_pay": "loss_of_pay",
     }
 
+    # Check if federal tax checkbox is selected
+    include_federal_tax = request.GET.get("include_federal_tax") == "on"
+    federal_tax_columns = []
+
+    if include_federal_tax:
+        # Collect unique filing statuses from payslips
+        unique_filing_statuses = {}
+        for payslip in payslips:
+            # Get filing status from employee's contract
+            employee = payslip.employee_id
+            contract = Contract.objects.filter(
+                employee_id=employee, contract_status="active"
+            ).first()
+            if contract and contract.filing_status:
+                filing_status_id = contract.filing_status.id
+                filing_status_name = str(contract.filing_status)
+                if filing_status_id not in unique_filing_statuses:
+                    unique_filing_statuses[filing_status_id] = filing_status_name
+
+        # Create columns for each unique filing status
+        for filing_status_id, filing_status_name in unique_filing_statuses.items():
+            federal_tax_columns.append(
+                {
+                    "filing_status_id": filing_status_id,
+                    "label": filing_status_name,
+                }
+            )
+
     # Process standard columns
     for column_value, column_name in selected_columns:
         # Check if this column comes from pay_head_data
@@ -1330,6 +1358,25 @@ def payslip_export(request):
                         break
             payslips_data[deduction_col["label"]].append(amount)
 
+    # Process federal tax columns (using filing status name)
+    for federal_tax_col in federal_tax_columns:
+        payslips_data[federal_tax_col["label"]] = []
+        for payslip in payslips:
+            amount = 0
+            # Check if this payslip's employee has this filing status
+            employee = payslip.employee_id
+            contract = Contract.objects.filter(
+                employee_id=employee, contract_status="active"
+            ).first()
+            if (
+                contract
+                and contract.filing_status
+                and contract.filing_status.id == federal_tax_col["filing_status_id"]
+            ):
+                pay_head_data = payslip.pay_head_data or {}
+                amount = pay_head_data.get("federal_tax", 0)
+            payslips_data[federal_tax_col["label"]].append(amount)
+
     data_frame = pd.DataFrame(data=payslips_data)
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -1376,9 +1423,12 @@ def payslip_export(request):
     # Get column names from dataframe
     columns = list(data_frame.columns)
 
-    # Collect allowance and deduction column labels
+    # Collect allowance and deduction column labels (federal tax uses deduction styling)
     allowance_labels = [col["label"] for col in allowance_columns]
     deduction_labels = [col["label"] for col in deduction_columns]
+    federal_tax_labels = [col["label"] for col in federal_tax_columns]
+    # Combine deduction and federal tax labels for styling
+    all_deduction_labels = deduction_labels + federal_tax_labels
 
     # Apply formatting to columns
     for col_idx, col_name in enumerate(columns):
@@ -1397,8 +1447,8 @@ def payslip_export(request):
                     col_name if row_idx == 0 else data_frame.iloc[row_idx - 1, col_idx],
                     cell_format,
                 )
-        elif col_name in deduction_labels:
-            # Light red for deduction columns
+        elif col_name in all_deduction_labels:
+            # Light red for deduction and federal tax columns
             for row_idx in range(len(data_frame) + 1):  # +1 for header
                 cell_format = (
                     light_red_header_format if row_idx == 0 else light_red_format

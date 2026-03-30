@@ -569,6 +569,13 @@ class PayslipExportColumnForm(forms.Form):
         help_text=_("Include columns for each employee's individual deductions"),
     )
 
+    include_federal_tax = forms.BooleanField(
+        required=False,
+        initial=False,
+        label=_("Federal Tax"),
+        help_text=_("Include column for federal tax (uses filing status name)"),
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Deductions and allowances are handled via checkboxes, not per-item selection
